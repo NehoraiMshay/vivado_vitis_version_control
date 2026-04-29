@@ -1,6 +1,6 @@
 # 🚀 Vitis & Vivado Workspace Export / Import Guide
 
-This guide describes a version control approach for Vitis and Vivado projects using export and rebuild scripts.
+This guide describes an automated version control approach for Vitis and Vivado projects.
 
 ---
 
@@ -32,7 +32,7 @@ Before starting, make sure the following requirements are met:
 # 🧠 VITIS WORKFLOW
 
 suitable for single-platform vitis workspace.
-## 📤 Exporting a Workspace
+## 📤 Exporting a project
 
 1. Copy the following files into your Vitis workspace directory:
 
