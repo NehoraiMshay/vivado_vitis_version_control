@@ -12,6 +12,7 @@ if "TCL_LIBRARY" in os.environ: del os.environ["TCL_LIBRARY"]
 if "TK_LIBRARY" in os.environ: del os.environ["TK_LIBRARY"]
 
 SRC_DEST_DIR_NAME = "tcl_imported_src"
+IP_DEST_DIR_NAME = "tcl_imported_ips" # NEW: Folder for custom IP Repositories
 
 # File extensions to look for
 EXTS = r"vhd|v|sv|xdc|dcp|xci|bd|tcl|mif|mem|coe"
@@ -24,6 +25,57 @@ PATH_PATTERN = re.compile(
 # ==============================================================================
 # CORE LOGIC
 # ==============================================================================
+def consolidate_ips(tcl_file_path):
+    ip_txt = Path("exported_ip_repos.txt")
+    if not ip_txt.exists():
+        return
+
+    print("----------------------------------------------------------------")
+    print(f"[INFO] Starting IP Consolidation into '{IP_DEST_DIR_NAME}'...")
+    
+    dest_dir = Path.cwd() / IP_DEST_DIR_NAME
+    dest_dir.mkdir(exist_ok=True)
+
+    with open(ip_txt, 'r', encoding='utf-8') as f:
+        ip_paths = [line.strip() for line in f if line.strip()]
+
+    # Copy actual IP directories
+    for ip_path in ip_paths:
+        src_path = Path(ip_path).resolve()
+        if src_path.exists() and src_path.is_dir():
+            target_path = dest_dir / src_path.name
+            if not target_path.exists():
+                print(f"  -> Copying IP Repo: {src_path.name}")
+                shutil.copytree(src_path, target_path, dirs_exist_ok=True)
+            else:
+                print(f"  -> IP Repo exists, skipping copy: {src_path.name}")
+        else:
+            print(f"[WARN] IP Repo path not found/invalid: {src_path}")
+
+    ip_txt.unlink() # Cleanup temp file
+
+    # Update the Tcl script to point to the new single IP directory
+    tcl_file = Path(tcl_file_path)
+    with open(tcl_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # 1. Update IP assignment
+    # Regex locates the set_property "ip_repo_paths" and points it to our new folder
+    prop_pattern = r'(set_property\s+["\{]?ip_repo_paths["\}]?\s+)(.+?)(\s+\$obj)'
+    prop_repl = r'\1"[file normalize "$origin_dir/' + IP_DEST_DIR_NAME + r'"]"\3'
+    content = re.sub(prop_pattern, prop_repl, content, flags=re.IGNORECASE|re.DOTALL)
+
+    # 2. Update the `checkRequiredFiles` validation array so the script doesn't crash on load
+    list_pattern = r'set paths \[list \\[\s\S]*?\n\s+\]\n\s+foreach ipath \$paths'
+    list_repl = f'set paths [list \\\n "[file normalize "$origin_dir/{IP_DEST_DIR_NAME}"]"\\\n  ]\n  foreach ipath $paths'
+    content = re.sub(list_pattern, list_repl, content)
+
+    with open(tcl_file, 'w', encoding='utf-8') as f:
+        f.write(content)
+        
+    print(f"[SUCCESS] IP Repositories consolidated and Tcl paths updated.")
+
+
 def consolidate_sources(tcl_file_path):
     print("----------------------------------------------------------------")
     print(f"[INFO] Starting Source Consolidation into '{SRC_DEST_DIR_NAME}'...")
@@ -48,11 +100,8 @@ def consolidate_sources(tcl_file_path):
     with open(tcl_file, 'r', encoding='utf-8') as f: content = f.read()
 
     # Mappings
-    real_path_map = {}   # Map[Source_Path_Obj] = "final_name.v"
-    suffix_lookup = {}   # Map["file.v"] = [Source_Path_Obj_1, ...]
-    
-    # Inventory of what we have actually put in the new folder (for content check)
-    # Map["file.v"] = [Path(dest/file.v), Path(dest/file_2.v)]
+    real_path_map = {}   
+    suffix_lookup = {}   
     dest_inventory = {}
 
     def resolve(raw_path):
@@ -82,32 +131,23 @@ def consolidate_sources(tcl_file_path):
         raw_path = match.group(1) or match.group(2) or match.group(3)
         real_path = resolve(raw_path)
         
-        # If valid file AND we haven't mapped this exact path object yet
         if real_path and real_path not in real_path_map:
             fname = real_path.name
             
-            # Skip the Tcl script itself
             if real_path == tcl_file: continue
 
             final_name = None
             
-            # --- DEDUPLICATION LOGIC ---
-            # Check if we already have a file with this name in destination
             if fname in dest_inventory:
-                # Check content against ALL existing versions (file.v, file_2.v, etc)
                 for existing_dest_path in dest_inventory[fname]:
                     if filecmp.cmp(real_path, existing_dest_path, shallow=False):
-                        # CONTENT MATCH! It's the same file. Don't copy.
                         final_name = existing_dest_path.name
                         break
             
-            # If no content match found, create a new copy
             if final_name is None:
-                # Calculate unique name
                 if fname not in dest_inventory:
                     final_name = fname
                 else:
-                    # Start counting at 2
                     cnt = 2
                     while True:
                         candidate = f"{real_path.stem}_{cnt}{real_path.suffix}"
@@ -116,7 +156,6 @@ def consolidate_sources(tcl_file_path):
                             break
                         cnt += 1
                 
-                # Copy the file
                 try:
                     target = dest_dir / final_name
                     shutil.copy2(real_path, target)
@@ -129,7 +168,6 @@ def consolidate_sources(tcl_file_path):
                     print(f"[WARN] Failed to copy {fname}: {e}")
                     final_name = fname 
 
-            # Register the mapping
             real_path_map[real_path] = final_name
             if fname not in suffix_lookup: suffix_lookup[fname] = []
             suffix_lookup[fname].append(real_path)
@@ -147,7 +185,6 @@ def consolidate_sources(tcl_file_path):
         if real_path and real_path in real_path_map:
             target_name = real_path_map[real_path]
         elif not real_path:
-            # Suffix Match for broken paths
             fname = Path(raw_path).name
             if fname in suffix_lookup:
                 candidates = suffix_lookup[fname]
@@ -183,6 +220,7 @@ def consolidate_sources(tcl_file_path):
 # UTILS
 # ==============================================================================
 def generate_gitignore(tcl_file):
+    # Added the new tcl_imported_ips directory to the ignore list
     with open(tcl_file, 'r' , encoding='utf-8') as f: c = f.read()
     ip_dirs = set()
     m = re.search(r'set_property\s+["\{]ip_repo_paths["\}]\s+(.+?)\s+\$obj', c, re.DOTALL|re.IGNORECASE)
@@ -193,10 +231,12 @@ def generate_gitignore(tcl_file):
         f.write(f"*\n!.gitignore\n!{Path(tcl_file).name}\n!run_vivado_export.tcl\n!{Path(__file__).name}\n")
         f.write("!readme.md\n!*.zip\n!rebuild_vitis.tcl\n")
         f.write(f"!{SRC_DEST_DIR_NAME}/\n!{SRC_DEST_DIR_NAME}/**\n")
+        f.write(f"!{IP_DEST_DIR_NAME}/\n!{IP_DEST_DIR_NAME}/**\n")
         for d in sorted(ip_dirs): f.write(f"!{d}/\n!{d}/**\n")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        consolidate_ips(sys.argv[1])
         consolidate_sources(sys.argv[1])
         generate_gitignore(sys.argv[1])
     else: print("[ERROR] Missing Tcl argument.")

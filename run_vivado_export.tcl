@@ -19,6 +19,19 @@ puts "⚙️  Step 1: Exporting project structure to '$output_tcl_name'..."
 write_project_tcl -force $output_tcl_name
 
 # ------------------------------------------------------------------------------
+# Step 1.2: Extract IP Repository Paths
+# ------------------------------------------------------------------------------
+puts "⚙️  Step 1.2: Extracting IP Repository paths..."
+# Using current_fileset to grab the absolute paths
+set ip_repos [get_property IP_REPO_PATHS [current_fileset]]
+
+set ip_file [open "exported_ip_repos.txt" w]
+foreach ip_path $ip_repos {
+    puts $ip_file $ip_path
+}
+close $ip_file
+
+# ------------------------------------------------------------------------------
 # Step 1.5: Append Cleanup Command to the Generated File
 # ------------------------------------------------------------------------------
 # This adds the logic to delete 'tcl_imported_src' inside the generated script
