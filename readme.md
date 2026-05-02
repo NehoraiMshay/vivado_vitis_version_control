@@ -20,6 +20,10 @@ Before starting, make sure the following requirements are met:
 
 * **Xilinx Vivado / Vitis:** Version **2023.1** (must be consistent across the team)
 * **Python 3.x:** Installed and added to system `PATH`
+* **Unique Source Names** No two files with different content should share the same filename
+* **Constraint Management**  Use separate constraint sets, Each set should contain **only one constraint file**
+* **Board Files** Ensure required board files are installed via: Vivado Board Store
+
 
 ### ⚠️ Important Rules
 
@@ -78,7 +82,7 @@ suitable for single-platform vitis workspace.
 3. Run:
 
    ```tcl
-   cd <path to cloned/exported directory:>
+   cd <path to cloned directory:>
    source rebuild_vitis.tcl
    ```
 
@@ -91,60 +95,10 @@ suitable for single-platform vitis workspace.
 
 # 🧩 VIVADO WORKFLOW
 
-## ✅ Rules for Success
-
-Follow these strictly to avoid rebuild failures:
-
-### 📁 1. IP Core Location
-
-* All custom IPs must be inside the project directory
-  Example:
-
-  ```
-  <project_root>/ip_repo/
-  ```
-* ❌ Do NOT use absolute paths like:
-
-  ```
-  C:/MyDocuments/...
-  ```
-
-📌 **Check in Vivado:**
-
-```
-Settings → IP → Repository
-```
-
-Ensure all paths are **relative**
-
----
-
-### 🧾 2. Unique Source Names
-
-* No two files with different content should share the same filename
-
----
-
-### 📌 3. Constraint Management
-
-* Use **separate constraint sets**
-* Each set should contain **only one constraint file**
-
----
-
-### 🧱 4. Board Files
-
-* Ensure required board files are installed via:
-
-  ```
-  Vivado Board Store
-  ```
-
----
 
 ## 📤 Exporting a Vivado Project
 
-1. Place in project root:
+1. Place in project root directory:
 
    * `run_vivado_export.tcl`
    * `vivado_automation.py`
@@ -171,7 +125,7 @@ Ensure all paths are **relative**
 
 2. Open **Tcl Console**
 
-3. Navigate to the cloned/exported directory:
+3. Navigate to the cloned directory:
 
    ```tcl
    cd <project_directory>
@@ -191,6 +145,24 @@ Ensure all paths are **relative**
 ---
 
 # 📦 Summary
+```
+Unified_Project_Root_directory/
+│
+├── run_vivado_export.tcl
+├── vivado_automation.py
+├── Vivado_project_rebuild.tcl (Auto-generated)
+├── tcl_imported_src (Auto-generated)
+├── tcl_imported_ips (Auto-generated)
+├── .gitignore (Auto-generated)
+│
+├── rebuild_vitis.tcl
+├── <workspace_name>_export.zip (Auto-generated)
+└── vitis_workspace_directory/
+    ├── run_vitis_export.tcl
+    └── vitis_automation.py
+```
+vitis workspace can be seperated of nested in the vivado root directory.
+
 
 | Task             | Tool   | Script                       |
 | ---------------- | ------ | ---------------------------- |
