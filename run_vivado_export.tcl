@@ -4,7 +4,7 @@
 set script_path [file dirname [file normalize [info script]]]
 set python_tool "$script_path/vivado_automation.py"
 
-set output_tcl_name "Vivado_project_rebuild.tcl"
+set output_tcl_name "rebuild_vivado.tcl"
 
 puts "================================================================"
 puts "🚀 EXECUTION STARTED: run_vivado_export.tcl"
@@ -48,6 +48,26 @@ puts $tcl_file "    file delete -force \"tcl_imported_src\""
 puts $tcl_file "}"
 close $tcl_file
 
+# ------------------------------------------------------------------------------
+# Step 1.6: Append Generic Block Design Global Generation
+# ------------------------------------------------------------------------------
+puts "⚙️  Step 1.6: Adding automatic Global BD generation code to '$output_tcl_name'..."
+
+set tcl_file [open $output_tcl_name a]
+puts $tcl_file ""
+puts $tcl_file "# ------------------------------------------------------------------"
+puts $tcl_file "# AUTO-GENERATE: Force Global Synthesis for ALL Block Designs"
+puts $tcl_file "# ------------------------------------------------------------------"
+puts $tcl_file "puts \"INFO: Automatically forcing Global synthesis and generating targets for all BDs...\""
+puts $tcl_file "set all_bds \[get_files *.bd\]"
+puts $tcl_file "foreach bd \$all_bds {"
+puts $tcl_file "    puts \"  -> Processing: \$bd\""
+puts $tcl_file "    set_property synth_checkpoint_mode None \$bd"
+puts $tcl_file "    generate_target all \$bd"
+puts $tcl_file "}"
+# dynamically target the active fileset instead of hardcoding sources_1
+puts $tcl_file "update_compile_order -fileset \[current_fileset\]" 
+close $tcl_file
 # ------------------------------------------------------------------------------
 # Step 2: Run Python Automation (Source Consolidation & Gitignore)
 # ------------------------------------------------------------------------------

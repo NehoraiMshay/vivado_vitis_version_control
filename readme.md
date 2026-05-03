@@ -134,7 +134,7 @@ suitable for single-platform vitis workspace.
 4. Run:
 
    ```tcl
-   source Vivado_project_rebuild.tcl
+   source rebuild_vivado.tcl
    ```
 
 5. ✅ **Result:**
@@ -150,7 +150,7 @@ Unified_Project_Root_directory/
 │
 ├── run_vivado_export.tcl
 ├── vivado_automation.py
-├── Vivado_project_rebuild.tcl (Auto-generated)
+├── rebuild_vivado.tcl (Auto-generated)
 ├── tcl_imported_src (Auto-generated)
 ├── tcl_imported_ips (Auto-generated)
 ├── .gitignore (Auto-generated)
@@ -169,6 +169,6 @@ vitis workspace can be seperated of nested in the vivado root directory.
 | Export Workspace | Vitis  | `run_vitis_export.tcl`       |
 | Import Workspace | Vitis  | `rebuild_vitis.tcl`          |
 | Export Project   | Vivado | `run_vivado_export.tcl`      |
-| Import Project   | Vivado | `Vivado_project_rebuild.tcl`(auto-generated) |
+| Import Project   | Vivado | `rebuild_vivado.tcl`(auto-generated) |
 
 ---
