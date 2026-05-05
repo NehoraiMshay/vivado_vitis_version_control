@@ -98,7 +98,7 @@ suitable for single-platform vitis workspace.
 
 ## 📤 Exporting a Vivado Project
 
-1. Place in project root directory:
+1. Place in repository root directory:
 
    * `run_vivado_export.tcl`
    * `vivado_automation.py`
@@ -110,6 +110,7 @@ suitable for single-platform vitis workspace.
 4. Run:
 
    ```tcl
+   cd <path to repository root directory>
    source run_vivado_export.tcl
    ```
 
